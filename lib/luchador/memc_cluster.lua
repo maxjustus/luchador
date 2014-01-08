@@ -1,4 +1,4 @@
-local memcached = require "memcached"
+local memcached = require "resty.memcached"
 local hashfunc = ngx.crc32_short
 local SERVER_RETRIES = 10
 local MemcCluster = {}

@@ -1,8 +1,8 @@
-local Header = require "header"
-local cluster = require "memc_cluster"
-local storage = require "storage"
-local response = require "response"
-local upstream = require "upstream"
+local Header = require "luchador.header"
+local cluster = require "luchador.memc_cluster"
+local storage = require "luchador.storage"
+local response = require "luchador.response"
+local upstream = require "luchador.upstream"
 local table = table
 local debug_headers = ngx.var.debug_headers
 

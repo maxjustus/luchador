@@ -1,6 +1,6 @@
-local sha1 = require "sha1"
+local sha1 = require "luchador.sha1"
+local serializer = require "luchador.serializer"
 local zlib = require "zlib"
-local serializer = require "serializer"
 
 local Storage = {}
 local mt = {__index = Storage}

@@ -1,4 +1,4 @@
-local Header = require "header"
+local Header = require "luchador.header"
 local Upstream = {}
 local mt = {__index = Upstream}
 

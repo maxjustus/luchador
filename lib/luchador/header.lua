@@ -1,4 +1,4 @@
-local cache_control = require "cache_control"
+local cache_control = require "luchador.cache_control"
 local Header = {}
 local mt = {__index = Header}
 local debug_headers = ngx.var.debug_headers
