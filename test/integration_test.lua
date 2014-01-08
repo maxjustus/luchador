@@ -113,7 +113,7 @@ test("304s if etags matches If-None-Match", function()
   get({["If-None-Match"] = "123"}, server_response_headers, false)
   local headers = get({["If-None-Match"] = "123"}, server_response_headers)
 
-  return headers:match("304 Not Modified")
+  return headers:match("304 Not Modified") and headers:match("X-Cache: hit")
 end)
 
 test("excludes disallowed 304 headers on 304", function()
@@ -182,10 +182,11 @@ test("caches unique values for headers specified by varies header", function()
   return assert(headers:match("X-Cache: miss store"))
 end)
 
-test("after hit callback works", function()
-  get({}, {['Cache-Control'] = "max-age=50, public"}, false)
+test("before_response callback works", function()
+  local headers = get({}, {['Cache-Control'] = "max-age=50, public"}, false)
+  assert(headers:match("before%-response: miss%-store"))
   local headers = get({}, {['Cache-Control'] = "max-age=50, public"})
-  return headers:match("after%-hit: true")
+  return headers:match("before%-response: hit")
 end)
 
 stop_server()

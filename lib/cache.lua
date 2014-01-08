@@ -3,6 +3,7 @@ local cluster = require "memc_cluster"
 local storage = require "storage"
 local response = require "response"
 local upstream = require "upstream"
+local table = table
 local debug_headers = ngx.var.debug_headers
 
 local Cache = {}
@@ -13,32 +14,31 @@ function Cache.new(upstream_location, options)
   local servers = options.memcached_servers or {'127.0.0.1'}
   local datastore = cluster.connect(servers)
   local cache = {storage           = storage.new(datastore),
+                 status            = {},
                  upstream_location = upstream_location,
-                 after_hit         = options.after_hit,
-                 after_request     = options.after_request}
+                 before_response   = options.before_response,
+                 after_response    = options.after_response}
   setmetatable(cache, mt)
   return cache
 end
 
-function record(change)
-  local h = ngx.header['X-Cache']
-  if not h then h = '' end
-  ngx.header['X-Cache'] = h .. change .. ' '
+function Cache:record(change)
+  table.insert(self.status, change)
 end
 
-function Cache:call_callback(name)
-  if self[name] then self[name]() end
+function Cache:call_callback(name, arg)
+  if self[name] then self[name](arg) end
 end
 
 function Cache:miss()
   local upst = upstream.new(self.upstream_location)
   local did_store = self.storage:store_page(upst, self.req_headers)
 
-  record('miss')
+  self:record('miss')
   if did_store then
-    record('store')
+    self:record('store')
   else
-    record('pass')
+    self:record('pass')
   end
 
   self.response.headers = upst.header
@@ -67,13 +67,13 @@ function Cache:hit()
   self.response.headers = self.stored_headers
   self.response.status = 200
   self.response.body = self.cached_body
-  self:call_callback('after_hit')
-  record('hit')
+  self:record('hit')
 end
 
 function Cache:not_modified()
   self.response.status = ngx.HTTP_NOT_MODIFIED
   self.response.headers = self.stored_headers
+  self:record('hit')
 end
 
 function Cache:get_stored_headers()
@@ -112,8 +112,10 @@ function Cache:serve()
     end
   end
 
+  ngx.header['X-Cache'] = table.concat(self.status, ' ')
+  self:call_callback('before_response', self.status)
   self.response:serve()
-  self:call_callback('after_request')
+  self:call_callback('after_response')
   self.storage:keepalive()
 
   if debug_headers and self.req_headers['clear-ngx-cache'] then
