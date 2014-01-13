@@ -26,8 +26,8 @@ function Cache:record(change)
   table.insert(self.status, change)
 end
 
-function Cache:call_callback(name, arg)
-  if self[name] then self[name](arg) end
+function Cache:call_callback(name, cache_status, response_status)
+  if self[name] then self[name](cache_status, response_status) end
 end
 
 function Cache:miss()
@@ -113,7 +113,7 @@ function Cache:serve()
   end
 
   ngx.header['X-Cache'] = table.concat(self.status, ' ')
-  self:call_callback('before_response', self.status)
+  self:call_callback('before_response', self.status, self.response.status)
   self.response:serve()
   self:call_callback('after_response')
   self.storage:keepalive()
