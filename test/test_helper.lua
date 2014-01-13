@@ -1,10 +1,12 @@
 function test(label, scenario)
-	local success, result, message = pcall(scenario)
-	if success and result then
-		print(".")
-	else
+	local success, result, message = xpcall(scenario, function()
 		print("FAIL " .. label)
 		print(message)
+		print(debug.traceback())
+  end)
+
+	if success and result then
+		print(".")
 	end
 end
 
