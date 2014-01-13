@@ -5,21 +5,21 @@ local zlib = require "zlib"
 local Storage = {}
 local mt = {__index = Storage}
 
-function Storage.new(datastore)
-  local storage = {datastore = datastore}
+function Storage.new(datastore, page_key_filter)
+  local storage = {datastore = datastore,
+                   page_key_filter = page_key_filter}
   setmetatable(storage, mt)
   return storage
 end
 
 function Storage:page_key()
-  local homescreen_sig = self.datastore:get("live_homescreens_signature", false)
-  if homescreen_sig == nil then
-    homescreen_sig = ""
+  local key = ngx.var.scheme .. "://" .. ngx.var.host .. ngx.var.request_uri
+
+  if self.page_key_filter then
+    key = self.page_key_filter(key, self.datastore)
   end
 
-  local path = string.gsub(ngx.var.request_uri, "?.*", "")
-  local key = ngx.var.scheme .. "://" .. ngx.var.host .. path .. homescreen_sig
-  return sha1.hexdigest(key)
+  return 'lc' .. sha1.hexdigest(key)
 end
 
 function Storage:get_metadata(req_h)

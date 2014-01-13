@@ -41,16 +41,17 @@ test("supports max-age", function()
   local headers = get({},
                       {["Cache-Control"] = "max-age=180, public",
                        ["Content-Type"] = "text/html"})
-  return headers:match("Age: (.*)") and headers:match("X-Cache: miss store")
+  assert_match(headers, "Age: (.*)")
+  assert_match(headers, "X-Cache: miss store")
 end)
 
 test("supports s-maxage", function()
   local headers = get({},
                       {["Cache-Control"] = "s-maxage=800, max-age=180, public",
                        ["Content-Type"] = "text/html"})
-  return headers:match("ttl: 800") and
-         headers:match("Age: (.*)") and
-         headers:match("X-Cache: miss store")
+  assert_match(headers, "ttl: 800")
+  assert_match(headers, "Age: (.*)")
+  assert_match(headers, "X-Cache: miss store")
 end)
 
 test("supports expires", function()
@@ -58,9 +59,9 @@ test("supports expires", function()
                       {["Cache-Control"] = "public",
                        ["Expires"] = "Sat, 01 Jul 2036 01:50:55 UTC",
                        ["Content-Type"] = "text/html"})
-  return headers:match("ttl: %d%d%d") and
-         headers:match("Age: (.*)") and
-         headers:match("X%-Content%-Digest")
+  assert_match(headers, "ttl: %d%d%d")
+  assert_match(headers, "Age: (.*)")
+  assert_match(headers, "X%-Content%-Digest")
 end)
 
 test("ignores expires if cache-control disallows it", function()
@@ -68,24 +69,24 @@ test("ignores expires if cache-control disallows it", function()
                       {["Cache-Control"] = "no-cache",
                        ["Expires"] = "Sun, 22 Dec 2023 19:43:52 GMT",
                        ["Content-Type"] = "text/html"})
-  return not (headers:match("Age: (.*)") and
-         headers:match("X%-Content%-Digest"))
+  assert(not headers:match("Age: (.*)"))
+  assert(not headers:match("X%-Content%-Digest"))
 end)
 
 test("respects Pragma: no-cache", function()
   local headers = get({},
                       {["Pragma"] = "no-cache",
                        ["Expires"] = "Sun, 22 Dec 2023 19:43:52 GMT"})
-  return not (headers:match("Age: (.*)") and
-         headers:match("X%-Content%-Digest"))
+  assert(not headers:match("Age: (.*)"))
+  assert(not headers:match("X%-Content%-Digest"))
 end)
 
 test("caches and returns response headers", function()
   local headers = get({}, {['Content-Type'] = 'text/html',
                            ['Cache-Control'] = 'max-age=180, public'})
-  return headers:match("ttl: 180") and
-         headers:match("Content%-Type: text/html") and
-         headers:match("X-Cache: miss store")
+  assert_match(headers, "ttl: 180")
+  assert_match(headers, "Content%-Type: text/html")
+  assert_match(headers, "X-Cache: miss store")
 end)
 
 test("responds with gzipped content when Accept-Encoding includes gzip", function()
@@ -93,7 +94,7 @@ test("responds with gzipped content when Accept-Encoding includes gzip", functio
                 ['Cache-Control'] = 'max-age=180, public'}
   get({['Accept-Encoding'] = 'gzip'}, resp, false)
   local headers = get({['Accept-Encoding'] = 'gzip'}, resp, false)
-  return headers:match("gzip")
+  assert_match(headers, "gzip")
 end)
 
 test("responds with upzipped content when Accept-Encoding does not include gzip", function()
@@ -101,7 +102,7 @@ test("responds with upzipped content when Accept-Encoding does not include gzip"
                 ['Cache-Control'] = 'max-age=180, public'}
   get({['Accept-Encoding'] = 'chicken'}, resp, false)
   local headers = get({['Accept-Encoding'] = 'chicken'}, resp)
-  return not headers:match("gzip")
+  assert(not headers:match("gzip"))
 end)
 
 test("304s if etags matches If-None-Match", function()
@@ -113,7 +114,8 @@ test("304s if etags matches If-None-Match", function()
   get({["If-None-Match"] = "123"}, server_response_headers, false)
   local headers = get({["If-None-Match"] = "123"}, server_response_headers)
 
-  return headers:match("304 Not Modified") and headers:match("X-Cache: hit")
+  assert_match(headers, "304 Not Modified")
+  assert_match(headers, "X-Cache: hit")
 end)
 
 test("excludes disallowed 304 headers on 304", function()
@@ -138,13 +140,12 @@ test("excludes disallowed 304 headers on 304", function()
   get({["If-None-Match"] = "123"}, server_response_headers, false)
   local headers = get({["If-None-Match"] = "123"}, server_response_headers)
 
-  local includes_omitted = nil
   for k, _ in pairs(headers_to_omit) do
     k = k:gsub('-', '%%-')
-    includes_omitted = (includes_omitted or headers:match(k))
+    assert(not headers:match(k))
   end
 
-  return headers:match("304 Not Modified") and not includes_omitted
+  assert_match(headers, "304 Not Modified")
 end)
 
 for _, t in pairs({'no-cache',
@@ -157,7 +158,7 @@ do
     local headers = get({},
                         {["Cache-Control"] = "max-age=180, " .. t,
                         ["Content-Type"] = "text/html"})
-    return headers:match("X-Cache: miss pass")
+    assert_match(headers, "X-Cache: miss pass")
   end)
 end
 
@@ -169,25 +170,32 @@ test("caches unique values for headers specified by varies header", function()
   get({["Chicken"] = "blue"}, resp, false)
 
   local headers = get({["Chicken"] = "green"}, resp)
-  assert(headers:match("X-Cache: miss store"))
+  assert_match(headers, "X%-Cache: miss store")
 
   headers = get({["Content-Type"] = "green"}, resp, false)
-  assert(headers:match("X-Cache: miss store"))
+  assert_match(headers, "X%-Cache: miss store")
 
   headers = get({["Content-Type"] = "green"}, resp, false)
-  assert(headers:match("X-Cache: hit"))
+  assert_match(headers, "X%-Cache: hit")
 
   headers = get({["Content-Type"] = "greens", ["Zerp"] = "fun"}, resp)
-
-  return assert(headers:match("X-Cache: miss store"))
+  assert_match(headers, "X%-Cache: miss store")
 end)
 
 test("before_response callback works", function()
   local headers = get({}, {['Cache-Control'] = "max-age=50, public"}, false)
-  assert(headers:match("before%-response: miss%-store"))
-  assert(headers:match("before%-response%-status: 200"))
-  local headers = get({}, {['Cache-Control'] = "max-age=50, public"})
-  return headers:match("before%-response: hit")
+  assert_match(headers, "before%-response: miss%-store")
+  assert_match(headers, "before%-response%-status: 200")
+
+  headers = get({}, {['Cache-Control'] = "max-age=50, public"})
+  assert_match(headers, "before%-response: hit")
+end)
+
+-- see test/nginx/nginx.conf
+test("supports page_key_filter", function()
+  local headers = get({['page-key-filter'] = 'true'},
+  {['Cache-Control'] = "max-age=50, public"}, true)
+  assert_match(headers, 'Filtered: true')
 end)
 
 stop_server()
