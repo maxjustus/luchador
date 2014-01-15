@@ -24,16 +24,14 @@ function MemcCluster.get_memcached_connection(host)
   return memc
 end
 
-function MemcCluster.connect(hosts)
-  local cluster = {servers = {}}
+function MemcCluster.new(hosts)
+  local cluster = {
+    hosts = hosts,
+    server_count = #hosts,
+    servers = {}
+  }
+
   setmetatable(cluster, mt)
-
-  for _,host in ipairs(hosts) do
-    local client = MemcCluster.get_memcached_connection(host)
-    table.insert(cluster.servers, client)
-  end
-
-  cluster.server_count = #cluster.servers
 
   return cluster
 end
@@ -61,19 +59,29 @@ end
 function MemcCluster:for_key(key)
   local hash = hashfunc(key)
 
+  local host
   if self.server_count > 1 then
     for i = 0, SERVER_RETRIES do
       local index = (hash % server_count) + 1
-      local server = self.servers[index]
+      host = self.hosts[index]
 
-      if not server then
+      if not host then
         serverhash = hashfunc(hash .. i)
       else
-        return server
+        break
       end
     end
   else
-    return self.servers[1]
+    host = self.hosts[1]
+  end
+
+  local server
+  if self.servers[host] then
+    return self.servers[host]
+  else
+    local server = MemcCluster.get_memcached_connection(host)
+    self.servers[host] = server
+    return server
   end
 end
 
