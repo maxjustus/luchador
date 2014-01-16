@@ -19,7 +19,7 @@ function Storage:page_key()
     key = self.page_key_filter(key, self.datastore)
   end
 
-  return 'lc' .. sha1.hexdigest(key)
+  return 'lc' .. sha1.digest_base64(key)
 end
 
 function Storage:get_metadata(req_h)
