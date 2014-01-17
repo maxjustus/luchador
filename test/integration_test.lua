@@ -32,7 +32,7 @@ function start_server()
 end
 
 function stop_server()
-  os.execute('kill $(ps -ax | grep -v grep | grep "nginx -c $(echo $(pwd))" | head -n 1 | awk \'{print $1}\')')
+  os.execute('pkill -f "nginx -c $(echo $(pwd))"')
 end
 
 start_server()
