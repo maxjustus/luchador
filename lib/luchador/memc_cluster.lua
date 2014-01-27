@@ -62,7 +62,7 @@ function MemcCluster:for_key(key)
   local host
   if self.server_count > 1 then
     for i = 0, SERVER_RETRIES do
-      local index = (hash % server_count) + 1
+      local index = (hash % self.server_count) + 1
       host = self.hosts[index]
 
       if not host then
