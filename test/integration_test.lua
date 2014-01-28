@@ -2,20 +2,25 @@ require "test_helper"
 io = require "io"
 os = require "os"
 
-function get(request_headers, response_headers, flush)
+function get(request_headers, response_headers, flush, http_10)
   if flush == nil then flush = true end
-  local header_string = ""
+  local header_string = ''
   if flush then request_headers['clear-ngx-cache'] = 'true' end
   for h, v in pairs(request_headers) do
-    header_string = header_string .. '-H "' .. h .. ":" .. v .. '" '
+    header_string = header_string .. '-H "' .. h .. ':' .. v .. '" '
   end
 
   local path = ''
   for h, v in pairs(response_headers) do
-    path = path .. h .. ":" .. v .. ";"
+    path = path .. h .. ':' .. v .. ';'
   end
 
-  local command = 'curl 2>/dev/null ' .. header_string .. ' -I "localhost:8081/' .. path .. '"'
+  local flags = ''
+  if http_10 then
+    flags = ' -0 '
+  end
+
+  local command = 'curl 2>/dev/null ' .. header_string .. flags .. ' -I "localhost:8081/' .. path .. '"'
   local f = io.popen(command)
   local headers = f:read("*a")
   f:close()
@@ -146,6 +151,12 @@ test("excludes disallowed 304 headers on 304", function()
   end
 
   assert_match(headers, "304 Not Modified")
+end)
+
+test("sets content-length for http 1.0", function()
+  local headers = get({}, {['Content-Type'] = 'text/html',
+                           ['Cache-Control'] = 'max-age=10, public'}, true, true)
+  assert_match(headers, "Content%-Length")
 end)
 
 for _, t in pairs({'no-cache',

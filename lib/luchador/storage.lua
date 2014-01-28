@@ -114,6 +114,10 @@ function Storage:store_page(resp, req_h)
     resp.header['Content-Encoding'] = nil
   end
 
+  if not resp.header['Transfer-Encoding'] then
+    resp.header['Content-Length'] = #resp.body
+  end
+
   self:store_metadata(req_h, resp.header, digest_key, ttl)
   self:set(digest_key, resp.body, ttl)
   return true
