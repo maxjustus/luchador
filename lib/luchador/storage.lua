@@ -24,7 +24,7 @@ function Storage:page_key()
 end
 
 function Storage:get_metadata(req_h)
-  local metadata = self:get(self:page_key())
+  local metadata, locally_cached = self:get(self:page_key())
 
   if metadata == nil then
     return nil
@@ -37,10 +37,10 @@ function Storage:get_metadata(req_h)
 
       if cached_resp_h['Vary'] then
         if cached_vary_key == self.vary_key(cached_resp_h['Vary'], req_h) then
-          return cached_resp_h
+          return cached_resp_h, locally_cached
         end
       else
-        return cached_resp_h
+        return cached_resp_h, locally_cached
       end
     end
   end

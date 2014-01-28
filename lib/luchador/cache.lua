@@ -77,20 +77,24 @@ function Cache:not_modified()
 end
 
 function Cache:get_stored_headers()
+  local locally_cached
+
   if not self.stored_headers then
-    self.stored_headers = Header.become(self.storage:get_metadata(self.req_headers))
+    local stored_headers
+
+    stored_headers, locally_cached = self.storage:get_metadata(self.req_headers)
+    self.stored_headers = Header.become(stored_headers)
   end
 
-  return self.stored_headers
+  return self.stored_headers, locally_cached
 end
 
 function Cache:get_page()
-  local locally_cached
   if not self.cached_body then
-    self.cached_body, locally_cached = self.storage:get_page(self.stored_headers)
+    self.cached_body = self.storage:get_page(self.stored_headers)
   end
 
-  return self.cached_body, locally_cached
+  return self.cached_body
 end
 
 function Cache:serve()
@@ -101,18 +105,17 @@ function Cache:serve()
     return ngx.exit(ngx.HTTP_NOT_FOUND)
   end
 
-  self.response.headers = self:get_stored_headers()
+  local locally_cached
+  self.response.headers, locally_cached = self:get_stored_headers()
+  if locally_cached then self:record('local') end
 
   if self.response:check_not_modified() then
     self:not_modified()
   else
-    local success, locally_cached = self:get_page()
-
-    if success then
-      if locally_cached then self:record('local') end
-      self:hit()
-    else
+    if not self:get_page() then
       self:get_lock(function() self:miss() end)
+    else
+      self:hit()
     end
   end
 
