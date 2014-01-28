@@ -1,6 +1,7 @@
 local sha1 = require "luchador.sha1"
 local serializer = require "luchador.serializer"
 local zlib = require "zlib"
+local namespace = 'LC_'
 
 local Storage = {}
 local mt = {__index = Storage}
@@ -19,7 +20,7 @@ function Storage:page_key()
     key = self.page_key_filter(key, self.datastore)
   end
 
-  return 'lc' .. sha1.digest_base64(key)
+  return sha1.digest_base64(key)
 end
 
 function Storage:get_metadata(req_h)
@@ -128,8 +129,11 @@ function Storage:release_lock()
 end
 
 function Storage:set(key, val, ttl)
+  key = namespace .. key
+
   val = {val = val, ttl = ttl, created = ngx.time()}
   val = serializer.serialize(val)
+
   ngx.shared.cache:set(key, self.datastore:set(key, val, ttl), ttl)
   ngx.shared.cache:flush_expired(5)
 end
@@ -137,6 +141,8 @@ end
 function Storage:get(key)
   local locally_cached = false
   local entry = ngx.shared.cache:get(key)
+  key = namespace .. key
+
   if entry then
     locally_cached = true
   else
