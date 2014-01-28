@@ -139,9 +139,9 @@ function Storage:set(key, val, ttl)
 end
 
 function Storage:get(key)
+  key = namespace .. key
   local locally_cached = false
   local entry = ngx.shared.cache:get(key)
-  key = namespace .. key
 
   if entry then
     locally_cached = true
