@@ -17,7 +17,7 @@ function get(request_headers, response_headers, flush, http_10)
 
   local flags = ''
   if http_10 then
-    flags = ' -0 '
+    flags = ' -0 -H "Connection: Keep-Alive" '
   end
 
   local command = 'curl 2>/dev/null ' .. header_string .. flags .. ' -I "localhost:8081/' .. path .. '"'
@@ -156,6 +156,7 @@ end)
 test("sets content-length for http 1.0", function()
   local headers = get({}, {['Content-Type'] = 'text/html',
                            ['Cache-Control'] = 'max-age=10, public'}, true, true)
+  assert_match(headers, "keep%-alive")
   assert_match(headers, "Content%-Length")
 end)
 
