@@ -188,7 +188,7 @@ test("caches unique values for headers specified by varies header", function()
   assert_match(headers, "X%-Cache: miss store")
 
   headers = get({["Content-Type"] = "green"}, resp, false)
-  assert_match(headers, "X%-Cache: hit")
+  assert_match(headers, "X%-Cache: local hit")
 
   headers = get({["Content-Type"] = "greens", ["Zerp"] = "fun"}, resp)
   assert_match(headers, "X%-Cache: miss store")
@@ -200,7 +200,7 @@ test("before_response callback works", function()
   assert_match(headers, "before%-response%-status: 200")
 
   headers = get({}, {['Cache-Control'] = "max-age=50, public"})
-  assert_match(headers, "before%-response: hit")
+  assert_match(headers, "before%-response: local%-hit")
 end)
 
 -- see test/nginx/nginx.conf

@@ -164,7 +164,7 @@ function Storage:get(key)
       ngx.shared.cache:set(key, entry, thawed.ttl - age)
     end
 
-    return thawed.val
+    return thawed.val, locally_cached
   end
 end
 
