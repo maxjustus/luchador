@@ -16,6 +16,7 @@ function Cache.new(upstream_location, options)
   local cache = {storage           = storage.new(datastore, options.page_key_filter),
                  status            = {},
                  upstream_location = upstream_location,
+                 lock_timeout      = (options.lock_timeout or 30),
                  before_response   = options.before_response,
                  after_response    = options.after_response}
   setmetatable(cache, mt)
@@ -48,8 +49,9 @@ end
 
 function Cache:get_lock(f)
   local tries = 0
-  while tries < 15 do
-    if self.storage:get_lock() then
+  local lock_timeout = self.lock_timeout
+  while tries < lock_timeout do
+    if self.storage:get_lock(lock_timeout) then
       local r = f()
       self.storage:release_lock()
       return r

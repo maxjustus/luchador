@@ -123,8 +123,8 @@ function Storage:store_page(resp, req_h)
   return true
 end
 
-function Storage:get_lock()
-  local r, err = ngx.shared.cache:add(self:page_key() .. 'lock', true, 15)
+function Storage:get_lock(timeout)
+  local r, err = ngx.shared.cache:add(self:page_key() .. 'lock', true, timeout)
   return r
 end
 
