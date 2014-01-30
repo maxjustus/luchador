@@ -125,7 +125,7 @@ function Storage:get_skip()
 end
 
 function Storage:set_skip()
-  local r, err = ngx.shared.cache:set(self:page_key() .. 'skip', true, 5)
+  local r, err = ngx.shared.cache:set(self:page_key() .. 'skip', true, 30)
   return r
 end
 
