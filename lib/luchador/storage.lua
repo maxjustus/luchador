@@ -161,7 +161,10 @@ function Storage:get(key)
   if thawed then
     if not locally_cached then
       local age = (ngx.time() - thawed.created)
-      ngx.shared.cache:set(key, entry, thawed.ttl - age)
+      local remaining_ttl = thawed.ttl - age
+      if remaining_ttl > 0 then
+        ngx.shared.cache:set(key, entry, remaining_ttl)
+      end
     end
 
     return thawed.val, locally_cached
