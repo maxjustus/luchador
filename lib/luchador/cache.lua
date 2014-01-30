@@ -33,10 +33,21 @@ end
 
 function Cache:miss()
   local upst = upstream.new(self.upstream_location)
-  local did_store = self.storage:store_page(upst, self.req_headers)
+  local ttl = upst:ttl()
+  local cacheable = upst.status == 200 and ttl and not (ttl == '0')
+
+  local body, encoding =
+    self.storage:compress(upst.body, upst.header['Content-Type'], cacheable)
+
+  upst.body = body
+  upst.header['Content-Encoding'] = encoding
+  if encoding == 'gzip' then
+    upst.header['Content-Length'] = #body
+  end
 
   self:record('miss')
-  if did_store then
+  if cacheable then
+    self.storage:store_page(upst, self.req_headers, ttl)
     self:record('store')
   else
     self:record('pass')

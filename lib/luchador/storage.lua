@@ -94,33 +94,30 @@ function Storage:get_page(metadata)
   end
 end
 
-function Storage:store_page(resp, req_h)
-  if not (resp.status == 200) then -- TODO cache all response codes rack cache does
-    return false
-  end
-
-  local ttl = resp:ttl()
-  if ttl == nil or ttl == '0' then return false end
-
+function Storage:store_page(resp, req_h, ttl)
   ngx.log(ngx.INFO, "MISS" .. ngx.var.request_uri)
 
   local digest_key = ngx.md5(resp.body)
 
-  local h = resp.header['Content-Type']
-  if h:match('text') or h:match('application') then
-    resp.body = zlib.compress(resp.body, zlib.BEST_COMPRESSION, nil, 15+16)
-    resp.header["Content-Encoding"] = "gzip"
-  else
-    resp.header['Content-Encoding'] = nil
-  end
-
-  if not resp.header['Transfer-Encoding'] then
-    resp.header['Content-Length'] = #resp.body
-  end
-
   self:store_metadata(req_h, resp.header, digest_key, ttl)
   self:set(digest_key, resp.body, ttl)
   return true
+end
+
+function Storage:compress(content, content_type, use_best)
+  local compression_level = zlib.BEST_SPEED
+  if use_best then
+    compression_level = zlib.BEST_COMPRESSION
+  end
+
+  if content_type and
+     (content_type:match('text') or content_type:match('application'))
+  then
+    content = zlib.compress(content, compression_level, nil, 15+16)
+    return content, "gzip"
+  else
+    return content, nil
+  end
 end
 
 function Storage:get_skip()
