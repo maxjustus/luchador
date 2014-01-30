@@ -63,6 +63,7 @@ function Cache:get_lock(f)
   if self.storage:get_skip() then
     self:record('miss')
     self:record('pass')
+    self:before_serve()
     return ngx.exit(ngx.HTTP_NOT_FOUND)
   end
 
@@ -117,6 +118,11 @@ function Cache:get_page()
   return self.cached_body
 end
 
+function Cache:before_serve()
+  ngx.header['X-Cache'] = table.concat(self.status, ' ')
+  self:call_callback('before_response', self.status, self.response.status)
+end
+
 function Cache:serve()
   self.req_headers = ngx.req.get_headers()
   self.response = response.new(self.req_headers)
@@ -139,8 +145,7 @@ function Cache:serve()
     end
   end
 
-  ngx.header['X-Cache'] = table.concat(self.status, ' ')
-  self:call_callback('before_response', self.status, self.response.status)
+  self:before_serve()
   self.response:serve()
   self:call_callback('after_response')
   self.storage:keepalive()
