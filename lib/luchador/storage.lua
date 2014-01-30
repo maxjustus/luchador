@@ -123,6 +123,15 @@ function Storage:store_page(resp, req_h)
   return true
 end
 
+function Storage:get_skip()
+  return ngx.shared.cache:get(self:page_key() .. 'skip')
+end
+
+function Storage:set_skip()
+  local r, err = ngx.shared.cache:set(self:page_key() .. 'skip', true, 5)
+  return r
+end
+
 function Storage:get_lock(timeout)
   local r, err = ngx.shared.cache:add(self:page_key() .. 'lock', true, timeout)
   return r

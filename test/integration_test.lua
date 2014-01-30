@@ -86,6 +86,12 @@ test("respects Pragma: no-cache", function()
   assert(not headers:match("X%-Content%-Digest"))
 end)
 
+test('records that a page should not be cached and skips cache on subsequent requests', function()
+  local headers = get({}, {}, false)
+  local headers = get({}, {})
+  assert(headers:match("upstream"))
+end)
+
 test("caches and returns response headers", function()
   local headers = get({}, {['Content-Type'] = 'text/html',
                            ['Cache-Control'] = 'max-age=180, public'})

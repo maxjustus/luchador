@@ -40,6 +40,7 @@ function Cache:miss()
     self:record('store')
   else
     self:record('pass')
+    self.storage:set_skip()
   end
 
   self.response.headers = upst.header
@@ -48,6 +49,12 @@ function Cache:miss()
 end
 
 function Cache:get_lock(f)
+  if self.storage:get_skip() then
+    self:record('miss')
+    self:record('pass')
+    return ngx.exit(ngx.HTTP_NOT_FOUND)
+  end
+
   local tries = 0
   local lock_timeout = self.lock_timeout
   while tries < lock_timeout do
