@@ -153,6 +153,8 @@ function Cache:serve()
   if debug_headers and self.req_headers['clear-ngx-cache'] then
     ngx.shared.cache:flush_all()
   end
+
+  self.storage:flush_expired()
 end
 
 return Cache

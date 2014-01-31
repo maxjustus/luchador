@@ -144,7 +144,6 @@ function Storage:set(key, val, ttl)
   val = {val = val, ttl = ttl, created = ngx.time()}
   val = serializer.serialize(val)
 
-  ngx.shared.cache:flush_expired()
   ngx.shared.cache:set(key, self.datastore:set(key, val, ttl), ttl)
 end
 
@@ -175,6 +174,10 @@ function Storage:get(key)
 
     return thawed.val, locally_cached
   end
+end
+
+function Storage:flush_expired()
+  ngx.shared.cache:flush_expired(10)
 end
 
 function Storage:keepalive()
