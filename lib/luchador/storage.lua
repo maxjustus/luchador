@@ -121,36 +121,37 @@ function Storage:compress(content, content_type, use_best)
 end
 
 function Storage:get_skip()
-  return ngx.shared.cache:get(self:page_key() .. 'skip')
+  return ngx.shared.cache_locks:get(self:page_key() .. 'skip')
 end
 
 function Storage:set_skip()
-  local r, err = ngx.shared.cache:set(self:page_key() .. 'skip', true, 30)
+  local r, err = ngx.shared.cache_locks:set(self:page_key() .. 'skip', true, 30)
   return r
 end
 
 function Storage:get_lock(timeout)
-  local r, err = ngx.shared.cache:add(self:page_key() .. 'lock', true, timeout)
+  local r, err = ngx.shared.cache_locks:add(self:page_key() .. 'lock', true, timeout)
   return r
 end
 
 function Storage:release_lock()
-  return ngx.shared.cache:delete(self:page_key() .. 'lock')
+  return ngx.shared.cache_locks:delete(self:page_key() .. 'lock')
 end
 
-function Storage:set(key, val, ttl)
+function Storage:set(key, val, ttl, is_metadata)
   key = namespace .. key
 
   val = {val = val, ttl = ttl, created = ngx.time()}
   val = serializer.serialize(val)
 
-  ngx.shared.cache:set(key, self.datastore:set(key, val, ttl), ttl)
+  self:get_local_store(is_metadata):set(key, self.datastore:set(key, val, ttl), ttl)
 end
 
-function Storage:get(key)
+function Storage:get(key, is_metadata)
   key = namespace .. key
   local locally_cached = false
-  local entry = ngx.shared.cache:get(key)
+  local local_storage = self:get_local_store(is_metadata)
+  local entry = local_storage:get(key)
 
   if entry then
     locally_cached = true
@@ -168,7 +169,7 @@ function Storage:get(key)
       local age = (ngx.time() - thawed.created)
       local remaining_ttl = thawed.ttl - age
       if remaining_ttl > 0 then
-        ngx.shared.cache:set(key, entry, remaining_ttl)
+        local_storage:set(key, entry, remaining_ttl)
       end
     end
 
@@ -176,8 +177,18 @@ function Storage:get(key)
   end
 end
 
+function Storage:get_local_store(is_metadata)
+  if is_metadata then
+    return ngx.shared.cache_metadata
+  else
+    return ngx.shared.cache_entities
+  end
+end
+
 function Storage:flush_expired()
-  ngx.shared.cache:flush_expired(10)
+  ngx.shared.cache_locks:flush_expired(5)
+  ngx.shared.cache_metadata:flush_expired(5)
+  ngx.shared.cache_entities:flush_expired(5)
 end
 
 function Storage:keepalive()

@@ -151,7 +151,9 @@ function Cache:serve()
   self.storage:keepalive()
 
   if debug_headers and self.req_headers['clear-ngx-cache'] then
-    ngx.shared.cache:flush_all()
+    ngx.shared.cache_locks:flush_all()
+    ngx.shared.cache_metadata:flush_all()
+    ngx.shared.cache_entities:flush_all()
   end
 
   self.storage:flush_expired()
