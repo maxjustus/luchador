@@ -57,6 +57,7 @@ function Response:serve()
   self:set_content_encoding()
   self:set_headers()
   ngx.say(self.body)
+  ngx.eof()
 end
 
 return Response
