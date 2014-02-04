@@ -178,20 +178,20 @@ function Storage:get(key, is_metadata)
 end
 
 function Storage:local_set(key, value, ttl, is_metadata)
-  local padded_value, length
+  local padded_value, real_length
   if is_metadata then
     padded_value = value
   else
-    padded_value, length = self:pad(value)
+    padded_value, real_length = self:pad(value)
   end
 
-  self:get_local_store(is_metadata):set(key, padded_value, ttl, length)
+  self:get_local_store(is_metadata):set(key, padded_value, ttl, real_length)
 end
 
 function Storage:local_get(key, is_metadata)
-  local val, length = self:get_local_store(is_metadata):get(key)
-  if val and length then
-    return string.sub(val, 0, length)
+  local val, real_length = self:get_local_store(is_metadata):get(key)
+  if val and real_length then
+    return string.sub(val, 0, real_length)
   else
     return val
   end
@@ -216,12 +216,12 @@ end
 -- http://forum.nginx.org/read.php?29,240420,241321#msg-241321
 -- this code should be removed.
 function Storage:pad(value)
-  local length = #value
+  local real_length = #value
   local padded_length = self.local_entity_size
-  if length > padded_length then return end
+  if real_length > padded_length then return end
 
-  local padded_value = value .. string.rep(' ', padded_length - length)
-  return padded_value, length
+  local padded_value = value .. string.rep(' ', padded_length - real_length)
+  return padded_value, real_length
 end
 
 function Storage:flush_expired()
