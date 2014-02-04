@@ -25,7 +25,7 @@ function Storage:page_key()
 end
 
 function Storage:get_metadata(req_h)
-  local metadata, locally_cached = self:get(self:page_key())
+  local metadata, locally_cached = self:get(self:page_key(), true)
 
   if metadata == nil then
     return nil
@@ -70,7 +70,7 @@ function Storage:store_metadata(req_h, resp_h, digest_key, ttl)
   local cached_vary_val = {vk, req_h, resp_h}
   h[vary_position] = cached_vary_val
 
-  self:set(k, h, ttl)
+  self:set(k, h, ttl, true)
 end
 
 function Storage.vary_key(vary, req_h)
@@ -122,21 +122,21 @@ function Storage:compress(content, content_type, use_best)
 end
 
 function Storage:get_skip()
-  return ngx.shared.cache_locks:get(self:page_key() .. 'skip')
+  return ngx.shared.cache_metadata:get(self:page_key() .. 'skip')
 end
 
 function Storage:set_skip()
-  local r, err = ngx.shared.cache_locks:set(self:page_key() .. 'skip', true, 30)
+  local r, err = ngx.shared.cache_metadata:set(self:page_key() .. 'skip', true, 30)
   return r
 end
 
 function Storage:get_lock(timeout)
-  local r, err = ngx.shared.cache_locks:add(self:page_key() .. 'lock', true, timeout)
+  local r, err = ngx.shared.cache_metadata:add(self:page_key() .. 'lock', true, timeout)
   return r
 end
 
 function Storage:release_lock()
-  return ngx.shared.cache_locks:delete(self:page_key() .. 'lock')
+  return ngx.shared.cache_metadata:delete(self:page_key() .. 'lock')
 end
 
 function Storage:set(key, val, ttl, is_metadata)
@@ -178,14 +178,15 @@ function Storage:get(key, is_metadata)
 end
 
 function Storage:local_set(key, value, ttl, is_metadata)
-  local padded_value, real_length
+  local storage = self:get_local_store(is_metadata)
+
   if is_metadata then
-    padded_value = value
+    storage:set(key, value, ttl)
   else
-    padded_value, real_length = self:pad(value)
+    local padded_value, real_length = self:pad(value)
+    storage:set(key, padded_value, ttl, real_length)
   end
 
-  self:get_local_store(is_metadata):set(key, padded_value, ttl, real_length)
 end
 
 function Storage:local_get(key, is_metadata)
@@ -225,7 +226,6 @@ function Storage:pad(value)
 end
 
 function Storage:flush_expired()
-  ngx.shared.cache_locks:flush_expired(5)
   ngx.shared.cache_metadata:flush_expired(5)
   ngx.shared.cache_entities:flush_expired(5)
 end
