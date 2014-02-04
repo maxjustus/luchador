@@ -186,7 +186,6 @@ function Storage:local_set(key, value, ttl, is_metadata)
     local padded_value, real_length = self:pad(value)
     storage:set(key, padded_value, ttl, real_length)
   end
-
 end
 
 function Storage:local_get(key, is_metadata)
