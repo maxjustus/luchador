@@ -1,15 +1,14 @@
 local sha1 = require "luchador.sha1"
 local serializer = require "luchador.serializer"
 local zlib = require "zlib"
-local bit = require "bit"
-local bor, rshift = bit.bor, bit.rshift
 local namespace = 'LC_'
 
 local Storage = {}
 local mt = {__index = Storage}
 
-function Storage.new(datastore, page_key_filter)
+function Storage.new(datastore, page_key_filter, local_entity_size)
   local storage = {datastore = datastore,
+                   local_entity_size = local_entity_size,
                    page_key_filter = page_key_filter}
   setmetatable(storage, mt)
   return storage
@@ -179,7 +178,13 @@ function Storage:get(key, is_metadata)
 end
 
 function Storage:local_set(key, value, ttl, is_metadata)
-  local padded_value, length = self:pad(value, #key)
+  local padded_value, length
+  if is_metadata then
+    padded_value = value
+  else
+    padded_value, length = self:pad(value)
+  end
+
   self:get_local_store(is_metadata):set(key, padded_value, ttl, length)
 end
 
@@ -187,6 +192,8 @@ function Storage:local_get(key, is_metadata)
   local val, length = self:get_local_store(is_metadata):get(key)
   if val and length then
     return string.sub(val, 0, length)
+  else
+    return val
   end
 end
 
@@ -198,21 +205,23 @@ function Storage:get_local_store(is_metadata)
   end
 end
 
-function Storage:pad(value, key_length)
+-- This is required for large local store entries
+-- due to an issue with the way nginx's slab allocator
+-- works with large allocations. It will repeatedly split
+-- the slabs until the maximum slab size is too small to
+-- store any cached page data in.
+-- The only workaround that seems effective is to pad every
+-- value so they all have the same size.
+-- Once some version of this patch gets into mainline nginx
+-- http://forum.nginx.org/read.php?29,240420,241321#msg-241321
+-- this code should be removed.
+function Storage:pad(value)
   local length = #value
-  local padded_length = Storage.next_power_of_two(length + key_length)
+  local padded_length = self.local_entity_size
+  if length > padded_length then return end
+
   local padded_value = value .. string.rep(' ', padded_length - length)
   return padded_value, length
-end
-
-function Storage.next_power_of_two(n)
-  n = n - 1
-  n = bor(n, rshift(n, 1))
-  n = bor(n, rshift(n, 2))
-  n = bor(n, rshift(n, 4))
-  n = bor(n, rshift(n, 8))
-  n = bor(n, rshift(n, 16))
-  return n + 1
 end
 
 function Storage:flush_expired()

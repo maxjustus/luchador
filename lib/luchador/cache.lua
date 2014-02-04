@@ -13,7 +13,8 @@ function Cache.new(upstream_location, options)
   options = options or {}
   local servers = options.memcached_servers or {'127.0.0.1'}
   local datastore = cluster.new(servers)
-  local cache = {storage           = storage.new(datastore, options.page_key_filter),
+  local storage = storage.new(datastore, options.page_key_filter, (options.local_entity_size or 65536))
+  local cache = {storage           = storage,
                  status            = {},
                  upstream_location = upstream_location,
                  lock_timeout      = (options.lock_timeout or 30),
