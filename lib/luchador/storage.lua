@@ -1,6 +1,8 @@
 local sha1 = require "luchador.sha1"
 local serializer = require "luchador.serializer"
 local zlib = require "zlib"
+local bit = require "bit"
+local bor, rshift = bit.bor, bit.rshift
 local namespace = 'LC_'
 
 local Storage = {}
@@ -144,14 +146,13 @@ function Storage:set(key, val, ttl, is_metadata)
   val = {val = val, ttl = ttl, created = ngx.time()}
   val = serializer.serialize(val)
 
-  self:get_local_store(is_metadata):set(key, self.datastore:set(key, val, ttl), ttl)
+  self:local_set(key, self.datastore:set(key, val, ttl), ttl, is_metadata)
 end
 
 function Storage:get(key, is_metadata)
   key = namespace .. key
   local locally_cached = false
-  local local_storage = self:get_local_store(is_metadata)
-  local entry = local_storage:get(key)
+  local entry = self:local_get(key, is_metadata)
 
   if entry then
     locally_cached = true
@@ -169,11 +170,23 @@ function Storage:get(key, is_metadata)
       local age = (ngx.time() - thawed.created)
       local remaining_ttl = thawed.ttl - age
       if remaining_ttl > 0 then
-        local_storage:set(key, entry, remaining_ttl)
+        self:local_set(key, entry, remaining_ttl, is_metadata)
       end
     end
 
     return thawed.val, locally_cached
+  end
+end
+
+function Storage:local_set(key, value, ttl, is_metadata)
+  local padded_value, length = self:pad(value)
+  self:get_local_store(is_metadata):set(key, padded_value, ttl, length)
+end
+
+function Storage:local_get(key, is_metadata)
+  local val, length = self:get_local_store(is_metadata):get(key)
+  if val and length then
+    return string.sub(val, 0, length)
   end
 end
 
@@ -183,6 +196,23 @@ function Storage:get_local_store(is_metadata)
   else
     return ngx.shared.cache_entities
   end
+end
+
+function Storage:pad(value)
+  local length = #value
+  local padded_length = Storage.next_power_of_two(length)
+  local padded_value = value .. string.rep(' ', padded_length - length)
+  return padded_value, length
+end
+
+function Storage.next_power_of_two(n)
+  n = n - 1
+  n = bor(n, rshift(n, 1))
+  n = bor(n, rshift(n, 2))
+  n = bor(n, rshift(n, 4))
+  n = bor(n, rshift(n, 8))
+  n = bor(n, rshift(n, 16))
+  return n + 1
 end
 
 function Storage:flush_expired()
