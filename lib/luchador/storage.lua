@@ -179,7 +179,7 @@ function Storage:get(key, is_metadata)
 end
 
 function Storage:local_set(key, value, ttl, is_metadata)
-  local padded_value, length = self:pad(value)
+  local padded_value, length = self:pad(value, #key)
   self:get_local_store(is_metadata):set(key, padded_value, ttl, length)
 end
 
@@ -198,9 +198,9 @@ function Storage:get_local_store(is_metadata)
   end
 end
 
-function Storage:pad(value)
+function Storage:pad(value, key_length)
   local length = #value
-  local padded_length = Storage.next_power_of_two(length)
+  local padded_length = Storage.next_power_of_two(length + key_length)
   local padded_value = value .. string.rep(' ', padded_length - length)
   return padded_value, length
 end
