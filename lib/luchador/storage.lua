@@ -112,8 +112,8 @@ function Storage:compress(content, content_type, use_best, min_gzip_size)
   end
 
   if content_type and
-     #content > min_gzip_size and
-     (content_type:match('text') or content_type:match('application'))
+     (content_type:match('text') or content_type:match('application')) and
+     #content > min_gzip_size
   then
     content = zlib.compress(content, compression_level, nil, 15+16)
     return content, "gzip"
