@@ -27,8 +27,7 @@ function Storage:page_key()
 end
 
 function Storage:get_metadata(req_h)
-  local key = self:page_key()
-  local metadata, locally_cached = self:get(key, true)
+  local metadata, locally_cached = self:get(self:page_key(), true)
 
   if metadata == nil then
     return nil
