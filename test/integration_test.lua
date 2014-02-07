@@ -205,6 +205,7 @@ test("Caches locally once min_hits_for_local is met", function()
   get({}, resp, false)
   get({}, resp, false)
   local headers = get({}, resp, false)
+  assert_match(headers, "X%-Hit%-Count: 2")
   assert_match(headers, "X%-Cache: local hit")
 end)
 

@@ -153,16 +153,16 @@ end
 
 function Storage:incr_hit_count(key, ttl)
   key = key .. 'hits'
-  local c = ngx.shared.cache_metadata:incr(key, 1)
+  local count = ngx.shared.cache_metadata:incr(key, 1)
 
-  if not c then
+  if not count then
     ngx.shared.cache_metadata:set(key, 1, ttl)
-    c = 1
+    count = 1
   end
 
-  ngx.header['X-Hit-Count'] = c
-  self.hit_count = c
-  return c
+  ngx.header['X-Hit-Count'] = count
+  self.hit_count = count
+  return count
 end
 
 function Storage:get(key, is_metadata)
