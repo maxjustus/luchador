@@ -6,9 +6,11 @@ local namespace = 'LC_'
 local Storage = {}
 local mt = {__index = Storage}
 
-function Storage.new(datastore, page_key_filter, local_entity_size)
+function Storage.new(datastore, page_key_filter, local_entity_size, min_hits_for_local)
   local storage = {datastore = datastore,
+                   hit_count = 0,
                    local_entity_size = local_entity_size,
+                   min_hits_for_local = min_hits_for_local,
                    page_key_filter = page_key_filter}
   setmetatable(storage, mt)
   return storage
@@ -25,12 +27,12 @@ function Storage:page_key()
 end
 
 function Storage:get_metadata(req_h)
-  local metadata, locally_cached = self:get(self:page_key(), true)
+  local key = self:page_key()
+  local metadata, locally_cached = self:get(key, true)
 
   if metadata == nil then
     return nil
   else
-    ngx.log(ngx.INFO, "HIT")
     for _, metadata in pairs(metadata) do
       local cached_vary_key = metadata[1]
       local cached_req_h = metadata[2]
@@ -146,7 +148,22 @@ function Storage:set(key, val, ttl, is_metadata)
   val = {val = val, ttl = ttl, created = ngx.time()}
   val = serializer.serialize(val)
 
-  self:local_set(key, self.datastore:set(key, val, ttl), ttl, is_metadata)
+  self.datastore:set(key, val, ttl)
+end
+
+function Storage:incr_hit_count(key, ttl)
+  key = key .. 'hits'
+  local c = ngx.shared.cache_metadata:incr(key, 1)
+  ngx.header['XTHING'] = tostring(val) .. key
+
+  if not c then
+    ngx.shared.cache_metadata:set(key, 1, ttl)
+    c = 1
+  end
+
+  ngx.header['X-Hit-Count'] = c
+  self.hit_count = c
+  return c
 end
 
 function Storage:get(key, is_metadata)
@@ -166,7 +183,11 @@ function Storage:get(key, is_metadata)
   end
 
   if thawed then
-    if not locally_cached then
+    if is_metadata then
+      self:incr_hit_count(key, thawed.ttl)
+    end
+
+    if not locally_cached and self.hit_count >= self.min_hits_for_local then
       local age = (ngx.time() - thawed.created)
       local remaining_ttl = thawed.ttl - age
       if remaining_ttl > 0 then
@@ -182,7 +203,7 @@ function Storage:local_set(key, value, ttl, is_metadata)
   local storage = self:get_local_store(is_metadata)
   local real_length = #value
 
-  if is_metadata or real_length < 4096 then
+  if is_metadata then
     storage:set(key, value, ttl)
   else
     local padded_value = self:pad(value, real_length)

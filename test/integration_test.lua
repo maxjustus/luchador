@@ -126,7 +126,7 @@ test("304s if etags matches If-None-Match", function()
   local headers = get({["If-None-Match"] = "123"}, server_response_headers)
 
   assert_match(headers, "304 Not Modified")
-  assert_match(headers, "X-Cache: local hit")
+  assert_match(headers, "X-Cache: hit")
 end)
 
 test("excludes disallowed 304 headers on 304", function()
@@ -194,10 +194,18 @@ test("caches unique values for headers specified by varies header", function()
   assert_match(headers, "X%-Cache: miss store")
 
   headers = get({["Content-Type"] = "green"}, resp, false)
-  assert_match(headers, "X%-Cache: local hit")
+  assert_match(headers, "X%-Cache: hit")
 
   headers = get({["Content-Type"] = "greens", ["Zerp"] = "fun"}, resp)
   assert_match(headers, "X%-Cache: miss store")
+end)
+
+test("Caches locally once min_hits_for_local is met", function()
+  local resp = {['Content-Type'] = 'text/html', ['Cache-Control'] = 'max-age=10, public'}
+  get({}, resp, false)
+  get({}, resp, false)
+  local headers = get({}, resp, false)
+  assert_match(headers, "X%-Cache: local hit")
 end)
 
 test("before_response callback works", function()
@@ -206,7 +214,7 @@ test("before_response callback works", function()
   assert_match(headers, "before%-response%-status: 200")
 
   headers = get({}, {['Cache-Control'] = "max-age=50, public"})
-  assert_match(headers, "before%-response: local%-hit")
+  assert_match(headers, "before%-response: hit")
 end)
 
 -- see test/nginx/nginx.conf
