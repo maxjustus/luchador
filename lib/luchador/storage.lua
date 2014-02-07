@@ -6,10 +6,11 @@ local namespace = 'LC_'
 local Storage = {}
 local mt = {__index = Storage}
 
-function Storage.new(datastore, page_key_filter, local_entity_size, min_hits_for_local)
+function Storage.new(datastore, page_key_filter, local_entity_size, min_gzip_size, min_hits_for_local)
   local storage = {datastore = datastore,
                    hit_count = 0,
                    local_entity_size = local_entity_size,
+                   min_gzip_size = min_gzip_size,
                    min_hits_for_local = min_hits_for_local,
                    page_key_filter = page_key_filter}
   setmetatable(storage, mt)
@@ -106,7 +107,7 @@ function Storage:store_page(resp, req_h, ttl)
   return true
 end
 
-function Storage:compress(content, content_type, use_best, min_gzip_size)
+function Storage:compress(content, content_type, use_best)
   local compression_level = zlib.BEST_SPEED
   if use_best then
     compression_level = zlib.BEST_COMPRESSION
@@ -114,7 +115,7 @@ function Storage:compress(content, content_type, use_best, min_gzip_size)
 
   if content_type and
      (content_type:match('text') or content_type:match('application')) and
-     #content > min_gzip_size
+     #content > self.min_gzip_size
   then
     content = zlib.compress(content, compression_level, nil, 15+16)
     return content, "gzip"

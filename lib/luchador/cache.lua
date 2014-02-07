@@ -16,12 +16,12 @@ function Cache.new(upstream_location, options)
   local storage = storage.new(datastore,
                               options.page_key_filter,
                               (options.local_entity_size or 65536),
+                              (options.min_gzip_size or 20),
                               (options.min_hits_for_local or 100))
   local cache = {storage           = storage,
                  status            = {},
                  upstream_location = upstream_location,
                  lock_timeout      = (options.lock_timeout or 30),
-                 min_gzip_size     = (options.min_gzip_size or 20),
                  before_response   = options.before_response,
                  after_response    = options.after_response}
   setmetatable(cache, mt)
@@ -42,7 +42,7 @@ function Cache:miss()
   local cacheable = upst.status == 200 and ttl and not (ttl == '0')
 
   local body, encoding =
-    self.storage:compress(upst.body, upst.header['Content-Type'], cacheable, self.min_gzip_size)
+    self.storage:compress(upst.body, upst.header['Content-Type'], cacheable)
 
   upst.body = body
   upst.header['Content-Encoding'] = encoding
