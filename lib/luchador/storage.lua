@@ -200,12 +200,11 @@ end
 
 function Storage:local_set(key, value, ttl, is_metadata)
   local storage = self:get_local_store(is_metadata)
-  local real_length = #value
 
   if is_metadata then
     storage:set(key, value, ttl)
   else
-    local padded_value = self:pad(value, real_length)
+    local padded_value, real_length = self:pad(value)
     storage:set(key, padded_value, ttl, real_length)
   end
 end
@@ -237,12 +236,13 @@ end
 -- Once some version of this patch gets into mainline nginx
 -- http://forum.nginx.org/read.php?29,240420,241321#msg-241321
 -- this code should be removed.
-function Storage:pad(value, real_length)
+function Storage:pad(value)
+  local real_length = #value
   local padded_length = self.local_entity_size
   if real_length > padded_length then return end
 
   local padded_value = value .. string.rep(' ', padded_length - real_length)
-  return padded_value
+  return padded_value, real_length
 end
 
 function Storage:flush_expired()
