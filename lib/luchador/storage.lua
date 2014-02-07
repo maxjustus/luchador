@@ -154,7 +154,6 @@ end
 function Storage:incr_hit_count(key, ttl)
   key = key .. 'hits'
   local c = ngx.shared.cache_metadata:incr(key, 1)
-  ngx.header['XTHING'] = tostring(val) .. key
 
   if not c then
     ngx.shared.cache_metadata:set(key, 1, ttl)
