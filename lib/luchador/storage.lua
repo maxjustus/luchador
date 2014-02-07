@@ -6,13 +6,13 @@ local namespace = 'LC_'
 local Storage = {}
 local mt = {__index = Storage}
 
-function Storage.new(datastore, page_key_filter, local_entity_size, min_gzip_size, min_hits_for_local)
+function Storage.new(datastore, options)
   local storage = {datastore = datastore,
                    hit_count = 0,
-                   local_entity_size = local_entity_size,
-                   min_gzip_size = min_gzip_size,
-                   min_hits_for_local = min_hits_for_local,
-                   page_key_filter = page_key_filter}
+                   page_key_filter = options.page_key_filter,
+                   local_entity_size = (options.local_entity_size or 65536),
+                   min_gzip_size = (options.min_gzip_size or 20),
+                   min_hits_for_local = (options.min_hits_for_local or 100)}
   setmetatable(storage, mt)
   return storage
 end
