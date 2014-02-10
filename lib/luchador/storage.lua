@@ -12,7 +12,7 @@ function Storage.new(datastore, options)
                    page_key_filter = options.page_key_filter,
                    local_entity_size = (options.local_entity_size or 65536),
                    min_gzip_size = (options.min_gzip_size or 20),
-                   min_hits_for_local = (options.min_hits_for_local or 100)}
+                   min_hits_for_local = (options.min_hits_for_local or 50)}
   setmetatable(storage, mt)
   return storage
 end
