@@ -8,7 +8,7 @@ local mt = {__index = Storage}
 
 function Storage.new(datastore, options)
   local storage = {datastore = datastore,
-                   hit_count = 0,
+                   windowed_hit_count = 0,
                    page_key_filter = options.page_key_filter,
                    local_entity_size = (options.local_entity_size or 65536),
                    min_gzip_size = (options.min_gzip_size or 20),
@@ -152,17 +152,26 @@ function Storage:set(key, val, ttl, is_metadata)
 end
 
 function Storage:incr_hit_count(key, ttl)
-  key = key .. 'hits'
-  local count = ngx.shared.cache_metadata:incr(key, 1)
+  total_key = key .. 'hits'
+  window_key = key .. 'whits'
+  local count = self:incr_or_set(total_key, ttl)
 
-  if not count then
-    ngx.shared.cache_metadata:set(key, 1, ttl)
-    count = 1
-  end
+  -- hit window of 30 seconds for local cache
+  local window_count = self:incr_or_set(window_key, 30)
 
   ngx.header['X-Hit-Count'] = count
-  self.hit_count = count
-  return count
+  self.windowed_hit_count = window_count
+end
+
+function Storage:incr_or_set(key, ttl)
+  local c = ngx.shared.cache_metadata:incr(key, 1)
+
+  if not c then
+    ngx.shared.cache_metadata:set(key, 1, ttl)
+    c = 1
+  end
+
+  return c
 end
 
 function Storage:get(key, is_metadata)
@@ -186,7 +195,7 @@ function Storage:get(key, is_metadata)
       self:incr_hit_count(key, thawed.ttl)
     end
 
-    if not locally_cached and self.hit_count >= self.min_hits_for_local then
+    if not locally_cached and self.windowed_hit_count >= self.min_hits_for_local then
       local age = (ngx.time() - thawed.created)
       local remaining_ttl = thawed.ttl - age
       if remaining_ttl > 0 then
