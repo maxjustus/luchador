@@ -9,7 +9,7 @@ function noop(string) return string end
 function MemcCluster.get_memcached_connection(host)
   local memc, err = memcached:new{key_transform = {noop, noop}}
   if not memc then
-    ngx.log(ngx.WARN, "failed to instantiate memc: ", err)
+    ngx.log(ngx.CRIT, "failed to instantiate memc: ", err)
     return ngx.exit(ngx.HTTP_NOT_FOUND)
   end
 
@@ -17,7 +17,7 @@ function MemcCluster.get_memcached_connection(host)
 
   local ok, err = memc:connect(host, 11211)
   if not ok then
-    ngx.log(ngx.WARN, "failed to connect: ", err)
+    ngx.log(ngx.CRIT, "failed to connect: ", err)
     return ngx.exit(ngx.HTTP_NOT_FOUND)
   end
 
@@ -39,7 +39,7 @@ end
 function MemcCluster:get(key)
   local val, flags, err = self:for_key(key):get(key)
   if err then
-    ngx.log(ngx.WARN, "failed to get " .. key .. ": ", err)
+    ngx.log(ngx.CRIT, "failed to get " .. key .. ": ", err)
     return ngx.exit(ngx.HTTP_NOT_FOUND)
   end
 
@@ -49,7 +49,7 @@ end
 function MemcCluster:set(key, val, ttl)
   local flags, err = self:for_key(key):set(key, val, ttl)
   if err then
-    ngx.log(ngx.WARN, "failed to set " .. key .. ": ", err)
+    ngx.log(ngx.CRIT, "failed to set " .. key .. ": ", err)
     return ngx.exit(ngx.HTTP_NOT_FOUND)
   else
     return val
@@ -89,7 +89,7 @@ function MemcCluster:keepalive()
   for _,node in pairs(self.servers) do
     local ok, err = node:set_keepalive(10000, 100)
     if not ok then
-      ngx.log(ngx.WARN, "cannot set keepalive: ", err)
+      ngx.log(ngx.CRIT, "cannot set keepalive: ", err)
     end
   end
 end
