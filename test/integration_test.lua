@@ -126,7 +126,7 @@ test("304s if etags matches If-None-Match", function()
   local headers = get({["If-None-Match"] = "123"}, server_response_headers)
 
   assert_match(headers, "304 Not Modified")
-  assert_match(headers, "X-Cache: hit")
+  assert_match(headers, "X-Cache: local hit")
 end)
 
 test("excludes disallowed 304 headers on 304", function()
