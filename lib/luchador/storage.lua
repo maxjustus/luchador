@@ -149,6 +149,9 @@ function Storage:set(key, val, ttl, is_metadata)
   val = serializer.serialize(val)
 
   self.datastore:set(key, val, ttl)
+  if is_metadata then
+    self:local_set(key, val, ttl, is_metadata)
+  end
 end
 
 function Storage:incr_hit_count(key, ttl)
@@ -195,7 +198,9 @@ function Storage:get(key, is_metadata)
       self:incr_hit_count(key, thawed.ttl)
     end
 
-    if not locally_cached and self.windowed_hit_count >= self.min_hits_for_local then
+    if not locally_cached and
+      (is_metadata or self.windowed_hit_count >= self.min_hits_for_local)
+    then
       local age = (ngx.time() - thawed.created)
       local remaining_ttl = thawed.ttl - age
       if remaining_ttl > 0 then
