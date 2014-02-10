@@ -113,7 +113,9 @@ end
 
 function Cache:get_page()
   if not self.cached_body then
-    self.cached_body = self.storage:get_page(self.stored_headers)
+    local locally_cached = false
+    self.cached_body, locally_cached = self.storage:get_page(self.stored_headers)
+    if locally_cached then self:record('local') end
   end
 
   return self.cached_body
@@ -133,8 +135,7 @@ function Cache:serve()
   end
 
   local locally_cached
-  self.response.headers, locally_cached = self:get_stored_headers()
-  if locally_cached then self:record('local') end
+  self.response.headers = self:get_stored_headers()
 
   if self.response:check_not_modified() then
     self:not_modified()
