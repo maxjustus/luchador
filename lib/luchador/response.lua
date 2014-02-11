@@ -56,7 +56,7 @@ function Response:serve()
   ngx.status = self.status
   self:set_content_encoding()
   self:set_headers()
-  ngx.say(self.body)
+  ngx.print(self.body)
   ngx.eof()
 end
 
