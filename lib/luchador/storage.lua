@@ -155,15 +155,16 @@ function Storage:set(key, val, ttl, is_metadata)
 end
 
 function Storage:incr_hit_count(key, ttl)
-  total_key = key .. 'hits'
-  window_key = key .. 'whits'
+  local total_key = key .. 'hits'
+  local window_key = key .. 'whits'
   local count = self:incr_or_set(total_key, ttl)
 
-  -- hit window of 30 seconds for local cache
+  -- hit window of 60 seconds for local cache
+  local long_window_count = self:incr_or_set(window_key .. 'l', 60)
   local window_count = self:incr_or_set(window_key, 30)
 
   ngx.header['X-Hit-Count'] = count
-  self.windowed_hit_count = window_count
+  self.windowed_hit_count = (window_count + long_window_count) / 2
 end
 
 function Storage:incr_or_set(key, ttl)
