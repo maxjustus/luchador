@@ -20,7 +20,7 @@ function get(request_headers, response_headers, flush, http_10)
     flags = ' -0 -H "Connection: Keep-Alive" '
   end
 
-  local command = 'curl 2>/dev/null ' .. header_string .. flags .. ' -I "localhost:8081/' .. path .. '"'
+  local command = 'curl -s ' .. header_string .. flags .. ' -I "localhost:8081/' .. path .. '"'
   local f = io.popen(command)
   local headers = f:read("*a")
   f:close()
