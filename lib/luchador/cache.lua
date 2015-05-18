@@ -14,10 +14,15 @@ function Cache.new(upstream_location, options)
   local servers = options.memcached_servers or {'127.0.0.1'}
   local datastore = cluster.new(servers)
   local storage = storage.new(datastore, options)
+  local default_cached_response_filter = function(location, upst_response)
+    upst_response.header['Set-Cookie'] = nil
+  end
+
   local cache = {storage           = storage,
                  status            = {},
                  upstream_location = upstream_location,
                  lock_timeout      = (options.lock_timeout or 30),
+                 upstream_filter   = options.cached_response_filter or default_cached_response_filter,
                  before_response   = options.before_response,
                  after_response    = options.after_response}
   setmetatable(cache, mt)
@@ -36,6 +41,7 @@ function Cache:miss()
   local upst = upstream.new(self.upstream_location)
   local ttl = upst:ttl()
   local cacheable = upst.status == 200 and ttl and not (ttl == '0')
+  self['upstream_filter'](ngx.var.request_uri, upst)
 
   local body, encoding =
     self.storage:compress(upst.body, upst.header['Content-Type'], cacheable)

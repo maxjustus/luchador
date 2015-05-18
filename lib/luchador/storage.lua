@@ -55,7 +55,6 @@ function Storage:store_metadata(req_h, resp_h, digest_key, ttl)
   end
 
   resp_h['X-Content-Digest'] = digest_key
-  resp_h['Set-Cookie'] = nil
   local k = self:page_key()
   local h = (self:get(k) or {})
 

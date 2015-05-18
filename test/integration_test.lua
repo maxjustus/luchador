@@ -200,6 +200,14 @@ test("caches unique values for headers specified by varies header", function()
   assert_match(headers, "X%-Cache: miss store")
 end)
 
+test("Does not cache Set-Cookie header by default", function()
+  local resp = {["Cache-Control"] = "max-age=180, public",
+       ["Set-Cookie"] = "blue=red;" }
+
+  local headers = get({}, resp, false)
+  assert_equal(headers:match("Set%-Cookie"), nil)
+end)
+
 test("Caches locally once min_hits_for_local is met", function()
   local resp = {['Content-Type'] = 'text/html', ['Cache-Control'] = 'max-age=10, public'}
   get({}, resp, false)
