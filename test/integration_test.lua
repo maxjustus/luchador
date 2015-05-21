@@ -208,6 +208,13 @@ test("Does not cache Set-Cookie header by default", function()
   assert_equal(headers:match("Set%-Cookie"), nil)
 end)
 
+test("It does not strip Set-Cookie for stuff not being cached", function()
+  local resp = { ["Set-Cookie"] = "blue=red;" }
+
+  local headers = get({}, resp, false)
+  assert_match(headers, "Set%-Cookie")
+end)
+
 test("Caches locally once min_hits_for_local is met", function()
   local resp = {['Content-Type'] = 'text/html', ['Cache-Control'] = 'max-age=10, public'}
   get({}, resp, false)

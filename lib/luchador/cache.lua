@@ -41,7 +41,10 @@ function Cache:miss()
   local upst = upstream.new(self.upstream_location)
   local ttl = upst:ttl()
   local cacheable = upst.status == 200 and ttl and not (ttl == '0')
-  self['upstream_filter'](ngx.var.request_uri, upst)
+
+  if cacheable then
+    self['upstream_filter'](ngx.var.request_uri, upst)
+  end
 
   local body, encoding =
     self.storage:compress(upst.body, upst.header['Content-Type'], cacheable)
