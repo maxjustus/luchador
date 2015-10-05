@@ -16,6 +16,9 @@ Luchador has a few dependencies:
 * lzlib
 * lua-messagepack
 * lua-resty-memcached (https://github.com/agentzh/lua-resty-memcached/archive/v#{lua_memcached_version}.tar.gz)
+* nginx with lua configured
+* luajit
+* lua-nginx-module https://github.com/openresty/lua-nginx-module
 
 
 Vanilla Setup
